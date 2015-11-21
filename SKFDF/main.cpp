@@ -83,18 +83,6 @@ namespace SKfft
 	}
 }
 
-namespace image_split
-{
-	inline int myabs(int x)
-	{
-		return (x > 0) ? x : (-1 * x);
-	}
-	void flood_fill(const Mat &src,Mat &mask, Point &p)
-	{
-		//if(mask.at
-	}
-}
-
 //FFT: cv_32f->fft->mix(Re and Im)->normalize->reswap4p
 /*
 Rect(x,y,w,h)
@@ -153,15 +141,10 @@ int main()
 #endif
 
 	tmp2 = myinvdft(tmp1);
-	//show_and_wait(&tmp2, &idis);
-	//adaptiveThreshold(tmp2, tmp2, 255,CV_ADAPTIVE_THRESH_MEAN_C,CV_THRESH_BINARY,3,5);
 	threshold(tmp2, tmp2, 95, 255, CV_THRESH_BINARY);
-	//show_and_wait(&tmp2, &idis);
 	Mat mask = Mat::zeros(tmp2.rows, tmp2.cols, CV_8U);
 	{
 		//找到最大的区域
-		//dilate(mask, mask, Mat());
-		//erode(tmp2, tmp2, Mat());
 		Mat tmp2r(tmp2, Rect(1.0 / 3 * tmp2.cols, 0, 2.0 / 3 * tmp2.cols, tmp2.rows));
 		Mat tmp2ur(tmp2, Rect(0, 0, 1.0 / 3 * tmp2.cols, 1.0/5*tmp2.rows));
 		erode(tmp2r, tmp2r, Mat());
@@ -180,10 +163,6 @@ int main()
 		erode(mask, mask, Mat());
 		erode(mask, mask, Mat());
 		erode(mask, mask, Mat());
-		//erode(mask, mask, Mat());
-		//erode(mask, mask, Mat());
-		//dilate(mask, mask, Mat());
-		//dilate(mask, mask, Mat());
 		dilate(mask, mask, Mat());
 		dilate(mask, mask, Mat());
 		dilate(mask, mask, Mat());
@@ -204,7 +183,6 @@ int main()
 	Mat spiltans[3];
 	Mat spiltmask[3];
 	{
-		//blur(output, output, Size(3, 3));
 		for (int i = 0; i < 3; i++)
 		{
 			ehoutput.copyTo(spiltmask[i]);
@@ -212,7 +190,6 @@ int main()
 				spiltmask[i].setTo(Scalar::all(0));
 		}
 		GaussianBlur(spiltmask[0], spiltmask[0], Size(7, 7), 0, 0);
-		//equalizeHist(output, output);
 		//floodfill
 		Mat mask2;
 		bitwise_not(mask, mask2);
