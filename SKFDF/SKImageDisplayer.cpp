@@ -62,6 +62,7 @@ namespace thread
 	DWORD WINAPI Displaymat(LPVOID lpParamter)
 	{
 		SKImageDisplayerImpl::Dthread *dp = (SKImageDisplayerImpl::Dthread *)lpParamter;
+		cvWaitKey(200);
 		while (1)
 		{
 			Mat m= *(dp->m);
@@ -77,7 +78,7 @@ namespace thread
 					dp->stop = true;
 					dp->lock.unlock();
 				}
-				cvWaitKey(100);
+				cvWaitKey(200);
 			}
 			dp->lock.lock();
 			if (dp->stop == true)
@@ -148,6 +149,7 @@ void SKImageDisplayer::hide()
 		_impl->dth.lock.lock();
 		_impl->dth.stop = true;
 		_impl->dth.lock.unlock();
+		cvWaitKey(200);
 	}
 	_impl->shown = false;
 }

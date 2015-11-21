@@ -13,7 +13,7 @@
 #include<conio.h>
 using namespace std;
 
-static class SKCommand
+class SKCommand
 {
 public:
 	static bool compare(const string& x, const string& y)
@@ -58,6 +58,7 @@ public:
 	}
 	static double get_double(string mes = "")
 	{
+		fflush(stdin);
 		printf(mes.c_str());
 		double x;
 		scanf("%lf", &x);
@@ -66,6 +67,7 @@ public:
 	}
 	static int get_int(string mes = "")
 	{
+		fflush(stdin);
 		printf(mes.c_str());
 		int x;
 		scanf("%d", &x);
@@ -74,6 +76,7 @@ public:
 	}
 	static void wait_till_end(string mes = "")
 	{
+		fflush(stdin);
 		printf(mes.c_str());
 		int c = _getch();
 		fflush(stdin);
@@ -81,8 +84,9 @@ public:
 	}
 	static void wait_seconds(double seconds)
 	{
+		fflush(stdin);
 		printf("\nWaiting...Input any key to continue...\n");
-		int ms10_1 = seconds * 100;
+		int ms10_1 =(int)(seconds * 100);
 		for (int i = 0; i < 10; i++)
 		{
 			printf("%d ",10-i);

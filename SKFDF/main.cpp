@@ -11,53 +11,7 @@
 using namespace std;
 using namespace cv;
 
-//Mat cvdft(Mat src)
-//{
-//	Mat padded;                            //expand input image to optimal size
-//	int m = getOptimalDFTSize(src.rows);
-//	int n = getOptimalDFTSize(src.cols); // on the border add zero values
-//	copyMakeBorder(src, padded, 0, m - src.rows, 0, n - src.cols, BORDER_CONSTANT, Scalar::all(0));
-//
-//	Mat planes[] = { Mat_<float>(padded), Mat::zeros(padded.size(), CV_32F) };
-//	Mat complexI;
-//	merge(planes, 2, complexI);         // Add to the expanded another plane with zeros
-//
-//	dft(complexI, complexI);            // this way the result may fit in the source matrix
-//
-//	// compute the magnitude and switch to logarithmic scale
-//	// => log(1 + sqrt(Re(DFT(src))^2 + Im(DFT(src))^2))
-//	split(complexI, planes);                   // planes[0] = Re(DFT(src), planes[1] = Im(DFT(src))
-//	magnitude(planes[0], planes[1], planes[0]);// planes[0] = magnitude  
-//	Mat magI = planes[0];
-//
-//	magI += Scalar::all(1);                    // switch to logarithmic scale
-//	log(magI, magI);
-//
-//	// crop the spectrum, if it has an odd number of rows or columns
-//	magI = magI(Rect(0, 0, magI.cols & -2, magI.rows & -2));
-//
-//	// rearrange the quadrants of Fourier image  so that the origin is at the image center        
-//	int cx = magI.cols / 2;
-//	int cy = magI.rows / 2;
-//
-//	Mat q0(magI, Rect(0, 0, cx, cy));   // Top-Left - Create a ROI per quadrant 
-//	Mat q1(magI, Rect(cx, 0, cx, cy));  // Top-Right
-//	Mat q2(magI, Rect(0, cy, cx, cy));  // Bottom-Left
-//	Mat q3(magI, Rect(cx, cy, cx, cy)); // Bottom-Right
-//
-//	Mat tmp;                           // swap quadrants (Top-Left with Bottom-Right)
-//	q0.copyTo(tmp);
-//	q3.copyTo(q0);
-//	tmp.copyTo(q3);
-//
-//	q1.copyTo(tmp);                    // swap quadrant (Top-Right with Bottom-Left)
-//	q2.copyTo(q1);
-//	tmp.copyTo(q2);
-//
-//	normalize(magI, magI, 0, 1, CV_MINMAX); // Transform the matrix with float values into a 
-//	// viewable image form (float between values 0 and 1).
-//	return magI;
-//}
+#pragma warning (disable:4244)
 
 namespace SKfft
 {
@@ -117,30 +71,213 @@ namespace SKfft
 		q2.copyTo(q1);
 		tmp.copyTo(q2);
 	}
+
+	/*显示图片并等待*/
+	void show_and_wait(Mat *m,SKImageDisplayer *idis)
+	{
+		idis->hide();
+		idis->display(m);
+		SKCommand::wait_till_end("Wait to hide the image.\n");
+		idis->hide();
+		return;
+	}
 }
 
-using namespace SKfft;
+namespace image_split
+{
+	inline int myabs(int x)
+	{
+		return (x > 0) ? x : (-1 * x);
+	}
+	void flood_fill(const Mat &src,Mat &mask, Point &p)
+	{
+		//if(mask.at
+	}
+}
+
 //FFT: cv_32f->fft->mix(Re and Im)->normalize->reswap4p
+/*
+Rect(x,y,w,h)
+        w(cols)
+    <----------->
+h^  ------------y
+(|  |
+r|  |
+o|  |
+w|  |
+s|  |
+)↓  x
+*/
 int main()
 {
-	Mat input,output,output2,mixoutput;
+	using namespace SKfft;
+	Mat input,inputb,tmp1,tmp2,output;
 	input = imread("data\\HW2.jpg");
 	SKImageDisplayer idis;
 	idis.display(&input);
 	SKCommand::wait_seconds(5);
 	idis.hide();
+
 	cvtColor(input, input, CV_BGR2GRAY);
-	output = mydft(input);
+	threshold(input, inputb, 70, 255, CV_THRESH_BINARY);
+
 	{
-		mixoutput = mixmatrix(output);
-		normalize(mixoutput, mixoutput, 0, 255, CV_MINMAX);
-		reswap4p(mixoutput);
-		idis.display(&mixoutput);
+		//FFT与滤波
+		tmp1 = mydft(inputb);
+		reswap4p(tmp1);
+		int cx = tmp1.cols / 2;
+		int cy = tmp1.rows / 2;
+		Mat up(tmp1, Rect(cx - cx*CROP_WIDTH_PERCENT, 0, 2 * cx*CROP_WIDTH_PERCENT, cy*CROP_LENGTH_PERCENT));
+		Mat down(tmp1, Rect(cx - cx*CROP_WIDTH_PERCENT, 2 * cy - cy*CROP_LENGTH_PERCENT, 2 * cx*CROP_WIDTH_PERCENT, cy*CROP_LENGTH_PERCENT));
+		up.setTo(Scalar::all(0));
+		down.setTo(Scalar::all(0));
+		reswap4p(tmp1);
+		tmp1 = myinvdft(tmp1);
+		//show_and_wait(&tmp1,&idis);
+		tmp1 = mydft(tmp1);
+		reswap4p(tmp1);
+		cx = tmp1.cols / 2;
+		cy = tmp1.rows / 2;
+		Mat left(tmp1, Rect(0,cy-cy*CROP_WIDTH_PERCENT,cx*CROP_LENGTH_PERCENT,2*cy*CROP_WIDTH_PERCENT));
+		Mat right(tmp1, Rect(2 * cx - cx*CROP_LENGTH_PERCENT, cy - cy*CROP_WIDTH_PERCENT, cx*CROP_LENGTH_PERCENT, 2 * cy*CROP_WIDTH_PERCENT));
+		left.setTo(Scalar::all(0));
+		right.setTo(Scalar::all(0));
+		reswap4p(tmp1);
 	}
-	SKCommand::wait_till_end("Input anything to continue\n");
-	idis.hide();
-	output2 = myinvdft(output);
-	idis.display(&output2);
-	SKCommand::wait_till_end("Input anything to continue\n");
+
+#ifdef SHOW_FFT
+	Mat	mixoutput = mixmatrix(tmp1);
+	normalize(mixoutput, mixoutput, 0, 255, CV_MINMAX);
+	reswap4p(mixoutput);
+	show_and_wait(&mixoutput, &idis);
+#endif
+
+	tmp2 = myinvdft(tmp1);
+	//show_and_wait(&tmp2, &idis);
+	//adaptiveThreshold(tmp2, tmp2, 255,CV_ADAPTIVE_THRESH_MEAN_C,CV_THRESH_BINARY,3,5);
+	threshold(tmp2, tmp2, 95, 255, CV_THRESH_BINARY);
+	//show_and_wait(&tmp2, &idis);
+	Mat mask = Mat::zeros(tmp2.rows, tmp2.cols, CV_8U);
+	{
+		//找到最大的区域
+		//dilate(mask, mask, Mat());
+		//erode(tmp2, tmp2, Mat());
+		Mat tmp2r(tmp2, Rect(1.0 / 3 * tmp2.cols, 0, 2.0 / 3 * tmp2.cols, tmp2.rows));
+		Mat tmp2ur(tmp2, Rect(0, 0, 1.0 / 3 * tmp2.cols, 1.0/5*tmp2.rows));
+		erode(tmp2r, tmp2r, Mat());
+		erode(tmp2ur, tmp2ur, Mat());
+		vector<vector<Point>> contours;
+		findContours(tmp2, contours, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
+		if (!contours.empty())
+		{
+			int max = 0;
+			for (int i = 0; i < contours.size(); i++)
+				if (contourArea(contours[i]) > contourArea(contours[max]))
+					max = i;
+			drawContours(mask, contours, max, Scalar(255), -1);
+		}
+		
+		erode(mask, mask, Mat());
+		erode(mask, mask, Mat());
+		erode(mask, mask, Mat());
+		//erode(mask, mask, Mat());
+		//erode(mask, mask, Mat());
+		//dilate(mask, mask, Mat());
+		//dilate(mask, mask, Mat());
+		dilate(mask, mask, Mat());
+		dilate(mask, mask, Mat());
+		dilate(mask, mask, Mat());
+		dilate(mask, mask, Mat());
+		dilate(mask, mask, Mat());
+		dilate(mask, mask, Mat());
+		erode(mask, mask, Mat());
+		erode(mask, mask, Mat());
+		erode(mask, mask, Mat());
+		dilate(mask, mask, Mat());
+	}
+	Mat ehinput;
+	Mat ehoutput;
+	equalizeHist(input, ehinput);
+	input.copyTo(output, mask);
+	ehinput.copyTo(ehoutput, mask);
+	show_and_wait(&output, &idis);
+	Mat spiltans[3];
+	Mat spiltmask[3];
+	{
+		//blur(output, output, Size(3, 3));
+		for (int i = 0; i < 3; i++)
+		{
+			ehoutput.copyTo(spiltmask[i]);
+			if (i > 0)
+				spiltmask[i].setTo(Scalar::all(0));
+		}
+		GaussianBlur(spiltmask[0], spiltmask[0], Size(7, 7), 0, 0);
+		//equalizeHist(output, output);
+		//floodfill
+		Mat mask2;
+		bitwise_not(mask, mask2);
+		resize(mask2, mask2, Size(mask2.cols + 2, mask2.rows + 2));
+		cv::floodFill(spiltmask[0], mask2, cv::Point(spiltmask[0].cols / 2, spiltmask[0].rows / 2), Scalar(255), (Rect *)0, Scalar(1), Scalar(1));
+		threshold(spiltmask[0], spiltmask[0], 254, 255, CV_THRESH_BINARY);
+
+		//find_mid
+		vector<vector<Point>> contours;
+		findContours(spiltmask[0], contours, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
+		if (!contours.empty())
+		{
+			int max = 0;
+			for (int i = 0; i < contours.size(); i++)
+				if (contourArea(contours[i]) > contourArea(contours[max]))
+					max = i;
+			spiltmask[0].setTo(Scalar::all(0));
+			drawContours(spiltmask[0], contours, max, Scalar(255), -1);
+		}
+		dilate(spiltmask[0], spiltmask[0], Mat());
+		erode(spiltmask[0], spiltmask[0], Mat());
+		erode(spiltmask[0], spiltmask[0], Mat());
+		dilate(spiltmask[0], spiltmask[0], Mat());
+		dilate(spiltmask[0], spiltmask[0], Mat());
+		dilate(spiltmask[0], spiltmask[0], Mat());
+		dilate(spiltmask[0], spiltmask[0], Mat());
+
+		//spiltmask
+		Mat spilt12;
+		bitwise_xor(mask, spiltmask[0], spilt12);
+		contours.clear();
+
+		findContours(spilt12, contours, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
+		if (!contours.empty())
+		{
+			int max = 0;
+			for (int i = 0; i < contours.size(); i++)
+				if (contourArea(contours[i]) > contourArea(contours[max]))
+					max = i;
+			int max2 = 0;
+			for (int i = 0; i < contours.size(); i++)
+				if (contourArea(contours[i]) > contourArea(contours[max2]) && i != max)
+					max2 = i;
+			drawContours(spiltmask[1], contours, max, Scalar(255), -1);
+			drawContours(spiltmask[2], contours, max2, Scalar(255), -1);
+		}
+		dilate(spiltmask[1], spiltmask[1], Mat());
+		erode(spiltmask[1], spiltmask[1], Mat());
+		erode(spiltmask[1], spiltmask[1], Mat());
+		dilate(spiltmask[1], spiltmask[1], Mat());
+		dilate(spiltmask[2], spiltmask[2], Mat());
+		erode(spiltmask[2], spiltmask[2], Mat());
+		erode(spiltmask[2], spiltmask[2], Mat());
+		dilate(spiltmask[2], spiltmask[2], Mat());
+	}
+	for (int j = 0; j < 3; j++)
+	{
+		input.copyTo(spiltans[j], spiltmask[j]);
+		stringstream ss;
+		ss << "ans";
+		ss << j;
+		imshow(ss.str(), spiltans[j]);
+	}
+	waitKey(0);
 	return 0;
 }
+
+#pragma warning (default:4244)
