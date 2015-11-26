@@ -81,6 +81,15 @@ namespace SKfft
 		idis->hide();
 		return;
 	}
+
+	/*四角变换后，显示一个复数图*/
+	void show_fft(Mat &m, SKImageDisplayer &idis)
+	{
+		Mat	mixoutput = mixmatrix(m);
+		normalize(mixoutput, mixoutput, 0, 255, CV_MINMAX);
+		reswap4p(mixoutput);
+		show_and_wait(&mixoutput, &idis);
+	}
 }
 
 //FFT: cv_32f->fft->mix(Re and Im)->normalize->reswap4p
@@ -112,6 +121,7 @@ int main()
 	{
 		//FFT与滤波
 		tmp1 = mydft(inputb);
+		show_fft(tmp1,idis);
 		reswap4p(tmp1);
 		int cx = tmp1.cols / 2;
 		int cy = tmp1.rows / 2;
@@ -120,6 +130,7 @@ int main()
 		up.setTo(Scalar::all(0));
 		down.setTo(Scalar::all(0));
 		reswap4p(tmp1);
+		show_fft(tmp1, idis);
 		tmp1 = myinvdft(tmp1);
 		//show_and_wait(&tmp1,&idis);
 		tmp1 = mydft(tmp1);
@@ -131,6 +142,7 @@ int main()
 		left.setTo(Scalar::all(0));
 		right.setTo(Scalar::all(0));
 		reswap4p(tmp1);
+		show_fft(tmp1, idis);
 	}
 
 #ifdef SHOW_FFT
@@ -141,6 +153,7 @@ int main()
 #endif
 
 	tmp2 = myinvdft(tmp1);
+	show_and_wait(&tmp2, &idis);
 	threshold(tmp2, tmp2, 95, 255, CV_THRESH_BINARY);
 	Mat mask = Mat::zeros(tmp2.rows, tmp2.cols, CV_8U);
 	{
@@ -176,6 +189,7 @@ int main()
 	}
 	Mat ehinput;
 	Mat ehoutput;
+	show_and_wait(&mask, &idis);
 	equalizeHist(input, ehinput);
 	input.copyTo(output, mask);
 	ehinput.copyTo(ehoutput, mask);
@@ -190,6 +204,7 @@ int main()
 				spiltmask[i].setTo(Scalar::all(0));
 		}
 		GaussianBlur(spiltmask[0], spiltmask[0], Size(7, 7), 0, 0);
+		show_and_wait(&spiltmask[0], &idis);
 		//floodfill
 		Mat mask2;
 		bitwise_not(mask, mask2);
@@ -245,6 +260,7 @@ int main()
 		erode(spiltmask[2], spiltmask[2], Mat());
 		dilate(spiltmask[2], spiltmask[2], Mat());
 	}
+	SKImageDisplayer idis_2[3];
 	for (int j = 0; j < 3; j++)
 	{
 		input.copyTo(spiltans[j], spiltmask[j]);
@@ -252,8 +268,17 @@ int main()
 		ss << "ans";
 		ss << j;
 		imshow(ss.str(), spiltans[j]);
+		idis_2[j].display(&spiltans[j],ss.str().c_str());
 	}
-	waitKey(0);
+	//waitKey(0);
+	SKCommand::wait_till_end("Input something to end the program");
+	idis_2[0].hide();
+	idis_2[1].hide();
+	idis_2[2].hide();
+	imwrite("OUTPUT.jpg", output);
+	imwrite("spilt1.jpg", spiltans[0]);
+	imwrite("spilt2.jpg", spiltans[1]);
+	imwrite("spilt3.jpg", spiltans[2]);
 	return 0;
 }
 

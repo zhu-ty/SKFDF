@@ -137,6 +137,7 @@ void SKImageDisplayer::display(cv::Mat *m, const char *name)
 		_impl->dth.name = c;
 		_impl->dth.m = m;
 		_impl->dth.stop = false;
+		cvWaitKey(100);
 		_impl->hThread = CreateThread(NULL, 0, thread::Displaymat, &(_impl->dth), 0, NULL);
 	}
 	_impl->shown = true;
@@ -149,7 +150,7 @@ void SKImageDisplayer::hide()
 		_impl->dth.lock.lock();
 		_impl->dth.stop = true;
 		_impl->dth.lock.unlock();
-		cvWaitKey(200);
+		cvWaitKey(300);
 	}
 	_impl->shown = false;
 }
